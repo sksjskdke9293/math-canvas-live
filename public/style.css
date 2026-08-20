@@ -372,16 +372,18 @@ canvas {
 #equationLayer.select-mode {
   pointer-events: auto;
 }
-#equationLayer.select-mode .text-item {
+#equationLayer.select-mode .movable-item {
   pointer-events: auto;
   cursor: grab;
   outline: 2px dashed transparent;
   touch-action: none;
+  user-select: none;
 }
-#equationLayer.select-mode .text-item:hover {
+#equationLayer.select-mode .movable-item:hover,
+#equationLayer.select-mode .movable-item.dragging {
   outline-color: var(--blue);
 }
-#equationLayer.select-mode .text-item:active {
+#equationLayer.select-mode .movable-item:active {
   cursor: grabbing;
 }
 .equation {

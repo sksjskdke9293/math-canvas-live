@@ -59,7 +59,6 @@ function restore(s) {
   };
   im.src = s.image;
   $("#equationLayer").innerHTML = s.equations;
-  $$(".text-item").forEach(bindTextItem);
 }
 function broadcast() {
   if (!state.student) return;
@@ -243,40 +242,63 @@ $("#numberReady").onclick = () => {
   toast(`${state.parts}칸 수직선: 캔버스에서 드래그하세요`);
 };
 $("#textCancel").onclick = () => $("#textDialog").classList.add("hidden");
-function bindTextItem(el) {
-  el.onpointerdown = (e) => {
-    if (state.tool !== "select") return;
-    e.preventDefault();
-    snapshot();
-    const layerRect = $("#equationLayer").getBoundingClientRect();
-    const itemRect = el.getBoundingClientRect();
-    const offsetX = e.clientX - itemRect.left;
-    const offsetY = e.clientY - itemRect.top;
-    el.setPointerCapture(e.pointerId);
-    el.onpointermove = (move) => {
-      const maxX = layerRect.width - el.offsetWidth;
-      const maxY = layerRect.height - el.offsetHeight;
-      el.style.left = `${Math.max(0, Math.min(maxX, move.clientX - layerRect.left - offsetX))}px`;
-      el.style.top = `${Math.max(0, Math.min(maxY, move.clientY - layerRect.top - offsetY))}px`;
-    };
-    el.onpointerup = () => {
-      el.onpointermove = null;
-      el.onpointerup = null;
-      broadcast();
-    };
+const moveLayer = $("#equationLayer");
+let activeDrag = null;
+function beginMove(e) {
+  if (state.tool !== "select") return;
+  const item = e.target.closest(".movable-item");
+  if (!item || !moveLayer.contains(item)) return;
+  if (activeDrag) return;
+  e.preventDefault();
+  snapshot();
+  const layerRect = moveLayer.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  activeDrag = {
+    item,
+    layerRect,
+    offsetX: e.clientX - itemRect.left,
+    offsetY: e.clientY - itemRect.top,
   };
+  item.classList.add("dragging");
 }
+function moveItem(e) {
+  if (!activeDrag) return;
+  const { item, layerRect, offsetX, offsetY } = activeDrag;
+  const maxX = Math.max(0, layerRect.width - item.offsetWidth);
+  const maxY = Math.max(0, layerRect.height - item.offsetHeight);
+  item.style.left = `${Math.max(0, Math.min(maxX, e.clientX - layerRect.left - offsetX))}px`;
+  item.style.top = `${Math.max(0, Math.min(maxY, e.clientY - layerRect.top - offsetY))}px`;
+}
+moveLayer.onpointerdown = (e) => {
+  beginMove(e);
+  if (activeDrag && e.pointerId !== undefined) {
+    try {
+      moveLayer.setPointerCapture(e.pointerId);
+    } catch {}
+  }
+};
+moveLayer.onpointermove = moveItem;
+moveLayer.onmousedown = beginMove;
+window.addEventListener("mousemove", moveItem);
+function finishMove() {
+  if (!activeDrag) return;
+  activeDrag.item.classList.remove("dragging");
+  activeDrag = null;
+  broadcast();
+}
+moveLayer.onpointerup = finishMove;
+moveLayer.onpointercancel = finishMove;
+window.addEventListener("mouseup", finishMove);
 $("#textAdd").onclick = () => {
   const text = $("#textInput").value.trim();
   if (!text) return;
   const el = document.createElement("div");
-  el.className = "text-item";
+  el.className = "text-item movable-item";
   el.textContent = text;
   el.style.color = state.color;
   el.style.fontSize = `${Math.max(14, Math.min(72, +$("#textSize").value || 28))}px`;
   el.style.left = "12%";
   el.style.top = `${12 + $("#equationLayer").children.length * 9}%`;
-  bindTextItem(el);
   $("#equationLayer").append(el);
   $("#textDialog").classList.add("hidden");
   $("#textInput").value = "";
@@ -293,7 +315,7 @@ $("#mathAdd").onclick = () => {
   const latex = $("#mathInput").value.trim();
   if (!latex) return;
   const el = document.createElement("div");
-  el.className = "equation";
+  el.className = "equation movable-item";
   el.style.left = "12%";
   el.style.top = `${12 + state.equations.length * 10}%`;
   katex.render(latex, el, { throwOnError: false });
