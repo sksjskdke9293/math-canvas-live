@@ -191,6 +191,7 @@
               <button id="numberReady" class="primary">그리기 준비</button>
             </div>
             <div id="quizOverlay" class="quiz-overlay hidden">
+              <div id="quizScore" class="quiz-score">0문제 · 0개 정답</div>
               <div id="quizPreparing">
                 <div class="loader"></div>
                 <h2>퀴즈를 준비 중입니다.</h2>
@@ -205,6 +206,11 @@
                 >
                   정답 확인
                 </button>
+                <div id="quizWaiting" class="quiz-waiting hidden">
+                  <div class="loader"></div>
+                  <b>다른 학생들의 정답을 기다리는 중입니다.</b>
+                  <span id="studentQuizProgress"></span>
+                </div>
                 <div id="quizFeedback"></div>
               </div>
             </div>
@@ -271,6 +277,7 @@
                 id="teacherExplanation"
                 placeholder="예: 분자와 분모에 2를 곱해요." /></label
             ><button id="publishQuiz" class="primary">전체 학생에게 출제</button
+            ><button id="revealQuiz" class="secondary">정답 공개 / 다음</button
             ><button id="endQuiz" class="secondary">퀴즈 종료</button>
           </div>
           <div id="quizResults"></div>
@@ -305,6 +312,21 @@
           </div>
         </div>
       </section>
+      <div id="studentModal" class="student-modal hidden">
+        <div class="student-modal-card">
+          <header>
+            <div>
+              <b id="modalStudentName">학생 풀이</b>
+              <span class="online">● 실시간 로드</span>
+            </div>
+            <div>
+              <button id="modalClear" class="danger-button">이 학생 초기화</button>
+              <button id="modalClose" class="secondary">닫기</button>
+            </div>
+          </header>
+          <img id="modalStudentImage" alt="확대된 학생 풀이" />
+        </div>
+      </div>
     </main>
     <div id="toast"></div>
     <script src="/socket.io/socket.io.js"></script>

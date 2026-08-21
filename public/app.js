@@ -18,6 +18,7 @@ let state = {
   quiz: null,
 };
 let wordTimerHandle = null;
+let modalStudentNumber = null;
 const canvas = $("#canvas"),
   ctx = canvas.getContext("2d"),
   box = $("#canvasBox");
@@ -86,6 +87,7 @@ $("#enterStudent").onclick = () => {
   setTimeout(() => {
     resize();
     snapshot();
+    broadcast();
   }, 30);
 };
 $$(".tool[data-tool]").forEach(
@@ -370,7 +372,12 @@ $("#publishQuiz").onclick = () => {
     answer,
     explanation,
   });
+  $("#quizResults").innerHTML = "<b>학생 답안을 기다리는 중…</b>";
   toast("모든 학생에게 퀴즈를 출제했어요");
+};
+$("#revealQuiz").onclick = () => {
+  if (!state.room) return toast("먼저 수업 코드를 열어 주세요");
+  socket.emit("quiz-reveal", state.room);
 };
 $("#endQuiz").onclick = () => {
   if (!state.room) return;
@@ -413,10 +420,58 @@ socket.on("drawing", (p) => {
     card = document.createElement("article");
     card.className = "student-card";
     card.id = `student-${p.student.number}`;
-    card.innerHTML = `<header><b>${p.student.number}번 ${p.student.name}</b><span class="online">● 실시간</span></header><img alt="${p.student.name} 학생 풀이">`;
+    const header = document.createElement("header");
+    const name = document.createElement("b");
+    name.textContent = `${p.student.number}번 ${p.student.name}`;
+    const live = document.createElement("span");
+    live.className = "online";
+    live.textContent = "● 실시간";
+    const clearButton = document.createElement("button");
+    clearButton.className = "student-clear";
+    clearButton.textContent = "초기화";
+    clearButton.onclick = (event) => {
+      event.stopPropagation();
+      if (confirm(`${p.student.number}번 ${p.student.name} 학생의 풀이만 초기화할까요?`))
+        socket.emit("clear-student", { room: state.room, number: p.student.number });
+    };
+    header.append(name, live, clearButton);
+    const image = document.createElement("img");
+    image.alt = `${p.student.name} 학생 풀이`;
+    card.append(header, image);
+    card.onclick = () => {
+      modalStudentNumber = p.student.number;
+      $("#modalStudentName").textContent = `${p.student.number}번 ${p.student.name} 학생 풀이`;
+      $("#modalStudentImage").src = image.src;
+      $("#studentModal").classList.remove("hidden");
+    };
     $("#studentGrid").append(card);
   }
   card.querySelector("img").src = p.image;
+  if (String(modalStudentNumber) === String(p.student.number))
+    $("#modalStudentImage").src = p.image;
+});
+$("#modalClose").onclick = () => {
+  $("#studentModal").classList.add("hidden");
+  modalStudentNumber = null;
+};
+$("#modalClear").onclick = () => {
+  if (modalStudentNumber == null) return;
+  socket.emit("clear-student", { room: state.room, number: modalStudentNumber });
+};
+socket.on("student-cleared", ({ number }) => {
+  const image = $(`#student-${number} img`);
+  if (image) image.removeAttribute("src");
+  if (String(modalStudentNumber) === String(number))
+    $("#modalStudentImage").removeAttribute("src");
+  toast(`${number}번 학생의 풀이를 초기화했어요`);
+});
+socket.on("clear-student", () => {
+  snapshot();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  $("#equationLayer").innerHTML = "";
+  state.equations = [];
+  broadcast();
+  toast("선생님이 내 캔버스를 초기화했어요");
 });
 socket.on("clear-room", () => {
   if ($("#student").classList.contains("active")) {
@@ -444,32 +499,54 @@ socket.on("quiz-state", (quiz) => {
   $("#quizActive").classList.remove("hidden");
   $("#quizQuestion").textContent = quiz.question;
   $("#quizAnswer").value = "";
+  $("#quizAnswer").classList.remove("hidden");
+  $("#submitAnswer").classList.remove("hidden");
+  $("#quizWaiting").classList.add("hidden");
   $("#quizFeedback").className = "";
   $("#quizFeedback").textContent = "";
 });
 $("#submitAnswer").onclick = () => {
   if (!state.quiz || state.quiz.status !== "active") return;
-  const clean = (s) => s.trim().replace(/\s+/g, "").toLowerCase();
-  const correct = clean($("#quizAnswer").value) === clean(state.quiz.answer);
-  const feedback = $("#quizFeedback");
-  feedback.className = correct ? "feedback-good" : "feedback-bad";
-  feedback.innerHTML = correct
-    ? "정답입니다! 정말 잘했어요 🎉"
-    : `아쉬워요. 정답은 <b>${state.quiz.answer}</b>입니다.${state.quiz.explanation ? `<br><small>${state.quiz.explanation}</small>` : ""}`;
+  const answer = $("#quizAnswer").value.trim();
+  if (!answer) return toast("답을 입력해 주세요");
   socket.emit("quiz-result", {
     room: state.room,
-    student: state.student,
-    correct,
+    answer,
   });
 };
-socket.on("quiz-student-result", (r) => {
+socket.on("quiz-waiting", () => {
+  $("#quizAnswer").classList.add("hidden");
+  $("#submitAnswer").classList.add("hidden");
+  $("#quizWaiting").classList.remove("hidden");
+});
+socket.on("quiz-progress", ({ answered, total }) => {
+  $("#studentQuizProgress").textContent = `${answered}/${total}명 제출`;
+  if ($("#teacher").classList.contains("active"))
+    $("#quizResults").innerHTML = `<b>${answered}/${total}명 제출 완료</b>`;
+});
+socket.on("quiz-stats", (stats) => {
+  $("#quizScore").textContent = `${stats.total}문제 · ${stats.correct}개 정답`;
+});
+socket.on("quiz-reveal", (result) => {
+  $("#quizWaiting").classList.add("hidden");
+  $("#quizAnswer").classList.add("hidden");
+  $("#submitAnswer").classList.add("hidden");
+  const feedback = $("#quizFeedback");
+  feedback.className = result.correct ? "feedback-good" : "feedback-bad";
+  feedback.innerHTML = result.correct
+    ? `정답입니다! 🎉 <small>내 답: ${result.submitted}</small>`
+    : `오답입니다. 정답은 <b>${result.answer}</b>입니다.<br><small>${result.explanation || "다음 문제에서는 다시 도전해 보세요!"}</small>`;
+  $("#quizScore").textContent = `${result.stats.total}문제 · ${result.stats.correct}개 정답`;
+});
+socket.on("quiz-summary", ({ summary, answer }) => {
   if (!$("#teacher").classList.contains("active")) return;
-  const line = document.createElement("span");
-  line.className = r.correct ? "feedback-good" : "feedback-bad";
-  line.textContent = `${r.student.number}번 ${r.student.name}: ${r.correct ? "정답" : "오답"}`;
-  line.style.marginRight = "8px";
-  line.style.padding = "5px 8px";
-  $("#quizResults").append(line);
+  $("#quizResults").innerHTML = `<b>정답: ${answer}</b>`;
+  for (const result of summary) {
+    const line = document.createElement("span");
+    line.className = result.correct ? "feedback-good" : "feedback-bad";
+    line.textContent = `${result.student.number}번 ${result.student.name}: ${result.correct ? "정답" : "오답"} (${result.submitted})`;
+    $("#quizResults").append(line);
+  }
 });
 socket.on("wordgame-state", (game) => {
   if (game.status === "ended") {

@@ -475,11 +475,30 @@ canvas {
   border-radius: 18px;
   border: 1px solid var(--line);
   overflow: hidden;
+  cursor: zoom-in;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.student-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 35px #33415520;
 }
 .student-card header {
   height: 47px;
   padding: 0 14px;
   font-size: 13px;
+  gap: 8px;
+}
+.student-card header .online {
+  margin-left: auto;
+}
+.student-clear {
+  border: 0;
+  background: #fff1f2;
+  color: #be123c;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 700;
 }
 .student-card img {
   display: block;
@@ -582,6 +601,83 @@ canvas {
   place-items: center;
   text-align: center;
   padding: 24px;
+}
+.quiz-score {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  width: auto !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  background: var(--ink) !important;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: none !important;
+}
+.quiz-waiting {
+  margin-top: 18px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--soft);
+  display: grid;
+  gap: 10px;
+  place-items: center;
+}
+.quiz-waiting .loader {
+  width: 34px;
+  height: 34px;
+  border-width: 4px;
+}
+#quizResults span {
+  display: inline-block;
+  margin: 8px 8px 0 0;
+  padding: 6px 9px;
+  border-radius: 9px;
+}
+.student-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: #101827d9;
+  padding: 3vh 3vw;
+  display: grid;
+  place-items: center;
+}
+.student-modal-card {
+  width: min(1200px, 96vw);
+  height: min(850px, 92vh);
+  background: #fff;
+  border-radius: 22px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.student-modal-card header {
+  height: 68px;
+  flex: 0 0 68px;
+  padding: 0 20px;
+}
+.student-modal-card header > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.student-modal-card img {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: contain;
+  background-image: linear-gradient(#edf1f7 1px, transparent 1px),
+    linear-gradient(90deg, #edf1f7 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.danger-button {
+  border: 0;
+  background: #e11d48;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
 }
 .quiz-overlay > div {
   width: min(560px, 94%);
