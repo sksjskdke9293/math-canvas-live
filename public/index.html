@@ -214,27 +214,6 @@
                 <div id="quizFeedback"></div>
               </div>
             </div>
-            <div id="wordOverlay" class="quiz-overlay hidden">
-              <div>
-                <p class="eyebrow">표준국어대사전 끝말잇기</p>
-                <div id="wordTimer" class="word-timer">20</div>
-                <p id="wordMessage">게임 시작!</p>
-                <h2 id="currentWord">수학</h2>
-                <p>
-                  마지막 글자 <b id="lastChar">학</b>으로 시작하는 단어를
-                  입력하세요.
-                </p>
-                <div class="word-entry">
-                  <input
-                    id="wordInput"
-                    maxlength="12"
-                    placeholder="두 글자 이상 한글 단어"
-                  /><button id="submitWord" class="primary">단어 내기</button>
-                </div>
-                <div id="wordFeedback"></div>
-                <div id="usedWords"></div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -254,10 +233,6 @@
             /><button id="watchRoom" class="primary">수업 열기</button
             ><button id="clearRoom" class="secondary">전체 초기화</button>
           </div>
-        </div>
-        <div class="mode-tabs">
-          <button class="active" data-panel="quizMaker">수학 퀴즈</button
-          ><button data-panel="wordMaker">끝말잇기</button>
         </div>
         <div id="quizMaker" class="quiz-maker mode-panel">
           <div>
@@ -281,29 +256,6 @@
             ><button id="endQuiz" class="secondary">퀴즈 종료</button>
           </div>
           <div id="quizResults"></div>
-        </div>
-        <div id="wordMaker" class="quiz-maker mode-panel hidden">
-          <div>
-            <p class="eyebrow">표준국어대사전 끝말잇기</p>
-            <h3>먼저 맞는 단어를 낸 학생이 이어갑니다</h3>
-          </div>
-          <div class="word-settings">
-            <label
-              >첫 단어<input
-                id="startWord"
-                value="수학"
-                maxlength="12" /></label
-            ><label
-              >제한 시간(초)<input
-                id="wordTime"
-                type="number"
-                min="5"
-                max="120"
-                value="20" /></label
-            ><button id="startWordGame" class="primary">게임 시작</button
-            ><button id="endWordGame" class="secondary">게임 종료</button>
-          </div>
-          <div id="teacherWordStatus">수업을 연 뒤 게임을 시작하세요.</div>
         </div>
         <div id="studentGrid" class="student-grid">
           <div class="empty">

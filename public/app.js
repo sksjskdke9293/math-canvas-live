@@ -17,8 +17,9 @@ let state = {
   equations: [],
   quiz: null,
 };
-let wordTimerHandle = null;
 let modalStudentNumber = null;
+let lastLiveBroadcast = 0;
+let pendingLiveBroadcast = null;
 const canvas = $("#canvas"),
   ctx = canvas.getContext("2d"),
   box = $("#canvasBox");
@@ -69,6 +70,20 @@ function broadcast() {
     equations: state.equations,
     at: Date.now(),
   });
+}
+function broadcastWhileDrawing() {
+  const wait = 80 - (Date.now() - lastLiveBroadcast);
+  if (wait <= 0) {
+    lastLiveBroadcast = Date.now();
+    broadcast();
+    return;
+  }
+  if (!pendingLiveBroadcast)
+    pendingLiveBroadcast = setTimeout(() => {
+      pendingLiveBroadcast = null;
+      lastLiveBroadcast = Date.now();
+      broadcast();
+    }, wait);
 }
 $("#enterStudent").onclick = () => {
   const room = $("#roomInput").value.trim().toUpperCase(),
@@ -152,6 +167,7 @@ canvas.onpointermove = (e) => {
     ctx.lineWidth = state.tool === "eraser" ? state.width * 5 : state.width;
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
+    broadcastWhileDrawing();
   }
 };
 canvas.onpointerup = (e) => {
@@ -160,6 +176,11 @@ canvas.onpointerup = (e) => {
   if (state.tool === "line") drawLine(state.start, p);
   if (state.tool === "number") drawNumberLine(state.start, p, state.parts);
   state.drawing = false;
+  if (pendingLiveBroadcast) {
+    clearTimeout(pendingLiveBroadcast);
+    pendingLiveBroadcast = null;
+  }
+  lastLiveBroadcast = Date.now();
   broadcast();
 };
 function drawLine(a, b) {
@@ -386,29 +407,6 @@ $("#endQuiz").onclick = () => {
   $("#quizResults").innerHTML = "";
   toast("퀴즈 모드를 종료했어요");
 };
-$$(".mode-tabs button").forEach(
-  (b) =>
-    (b.onclick = () => {
-      $$(".mode-tabs button").forEach((x) => x.classList.remove("active"));
-      b.classList.add("active");
-      $$(".mode-panel").forEach((x) => x.classList.add("hidden"));
-      $("#" + b.dataset.panel).classList.remove("hidden");
-    }),
-);
-$("#startWordGame").onclick = () => {
-  if (!state.room) return toast("먼저 수업 코드를 열어 주세요");
-  const startWord = $("#startWord").value.trim(),
-    timeLimit = +$("#wordTime").value;
-  if (!/^[가-힣]{2,}$/.test(startWord))
-    return toast("첫 단어는 두 글자 이상의 한글로 입력해 주세요");
-  socket.emit("wordgame-start", { room: state.room, timeLimit, startWord });
-  toast("끝말잇기를 시작했어요");
-};
-$("#endWordGame").onclick = () => {
-  if (!state.room) return;
-  socket.emit("wordgame-end", state.room);
-  $("#teacherWordStatus").textContent = "게임을 종료했습니다.";
-};
 $("#clearRoom").onclick = () => {
   if (state.room && confirm("이 수업의 모든 학생 화면을 초기화할까요?"))
     socket.emit("clear-room", state.room);
@@ -547,53 +545,5 @@ socket.on("quiz-summary", ({ summary, answer }) => {
     line.textContent = `${result.student.number}번 ${result.student.name}: ${result.correct ? "정답" : "오답"} (${result.submitted})`;
     $("#quizResults").append(line);
   }
-});
-socket.on("wordgame-state", (game) => {
-  if (game.status === "ended") {
-    clearInterval(wordTimerHandle);
-    $("#wordOverlay").classList.add("hidden");
-    $("#teacherWordStatus").textContent = "게임이 종료되었습니다.";
-    return;
-  }
-  if ($("#teacher").classList.contains("active"))
-    $("#teacherWordStatus").textContent =
-      `현재 단어: ${game.currentWord} · ${game.used.length}개 사용 · ${game.message}`;
-  if (!state.student) return;
-  $("#quizOverlay").classList.add("hidden");
-  $("#wordOverlay").classList.remove("hidden");
-  $("#currentWord").textContent = game.currentWord;
-  $("#lastChar").textContent = game.currentWord.at(-1);
-  $("#wordMessage").textContent = game.message;
-  $("#usedWords").textContent = game.used.slice(-8).join(" → ");
-  $("#wordFeedback").textContent = "";
-  $("#wordInput").value = "";
-  clearInterval(wordTimerHandle);
-  const tick = () => {
-    const left = Math.max(0, Math.ceil((game.deadline - Date.now()) / 1000));
-    $("#wordTimer").textContent = left;
-    $("#wordTimer").classList.toggle("urgent", left <= 5);
-    if (left === 0)
-      $("#wordFeedback").textContent =
-        "시간이 초과됐어요. 다음 진행을 기다려 주세요.";
-  };
-  tick();
-  wordTimerHandle = setInterval(tick, 250);
-});
-$("#submitWord").onclick = () => {
-  const word = $("#wordInput").value.trim();
-  if (!word) return;
-  $("#wordFeedback").textContent = "표준국어대사전에서 확인 중…";
-  socket.emit("wordgame-submit", {
-    room: state.room,
-    student: state.student,
-    word,
-  });
-};
-$("#wordInput").onkeydown = (e) => {
-  if (e.key === "Enter") $("#submitWord").click();
-};
-socket.on("wordgame-reject", (message) => {
-  $("#wordFeedback").textContent = message;
-  $("#wordFeedback").className = "feedback-bad";
 });
 window.onresize = resize;

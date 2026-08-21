@@ -102,7 +102,6 @@
         if (quiz.status === "revealed") handleReveal(quiz);
       });
       roomRef("quizAnswers").on("value", () => progress());
-      roomRef("wordGame").on("value", (snap) => snap.val() && fire("wordgame-state", snap.val()));
     }
 
     async function emit(event, payload) {
@@ -157,36 +156,6 @@
           return roomRef("quiz/status").set("revealed");
         case "quiz-end":
           return roomRef("quiz").set({ status: "ended" });
-        case "wordgame-start":
-          return db.ref(`rooms/${payload.room}/wordGame`).set({
-            status: "active",
-            timeLimit: Math.max(5, Math.min(120, Number(payload.timeLimit) || 20)),
-            currentWord: payload.startWord,
-            used: [payload.startWord],
-            deadline: Date.now() + Math.max(5, Math.min(120, Number(payload.timeLimit) || 20)) * 1000,
-            message: "게임 시작!",
-          });
-        case "wordgame-submit": {
-          const word = String(payload.word || "").trim();
-          let rejection = "";
-          await db.ref(`rooms/${payload.room}/wordGame`).transaction((game) => {
-            if (!game || game.status !== "active") return;
-            if (Date.now() > game.deadline) rejection = "시간이 초과됐어요.";
-            else if (!/^[가-힣]{2,}$/.test(word)) rejection = "두 글자 이상의 한글 단어를 입력하세요.";
-            else if ((game.used || []).includes(word)) rejection = "이미 나온 단어예요.";
-            else if (word[0] !== game.currentWord.slice(-1)) rejection = `‘${game.currentWord.slice(-1)}’으로 시작해야 해요.`;
-            if (rejection) return;
-            game.currentWord = word;
-            game.used = [...(game.used || []), word];
-            game.deadline = Date.now() + game.timeLimit * 1000;
-            game.message = `${payload.student.number}번 ${payload.student.name} 성공!`;
-            return game;
-          });
-          if (rejection) fire("wordgame-reject", rejection);
-          return;
-        }
-        case "wordgame-end":
-          return db.ref(`rooms/${payload}/wordGame`).set({ status: "ended" });
       }
     }
     return { on, emit };
