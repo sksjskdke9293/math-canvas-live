@@ -1,0 +1,13 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        ".read": "$room.matches(/^[A-Za-z0-9_-]{3,12}$/)",
+        ".write": "$room.matches(/^[A-Za-z0-9_-]{3,12}$/)",
+        ".validate": "newData.hasChildren() || !newData.exists()"
+      }
+    }
+  }
+}
