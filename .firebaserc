@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "math-canvas-live-kr-2026"
-  }
+  },
+  "targets": {
+    "math-canvas-live-kr-2026": {
+      "hosting": {
+        "livecanvas": [
+          "livecanvas"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

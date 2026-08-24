@@ -3,8 +3,13 @@
     "rules": "database.rules.json"
   },
   "hosting": {
+    "target": "livecanvas",
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "/student", "destination": "/index.html" },
+      { "source": "/student/**", "destination": "/index.html" }
+    ],
     "headers": [
       {
         "source": "/",

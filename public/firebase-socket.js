@@ -105,16 +105,33 @@
     }
 
     async function emit(event, payload) {
+      if (event === "create-room") {
+        room = payload.room;
+        student = null;
+        await roomRef("meta").update({
+          expected: payload.expected,
+          active: true,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP,
+        });
+        attach();
+        return { ok: true };
+      }
       if (event === "join") {
         room = payload.room;
         student = payload.student || null;
+        const meta = await roomRef("meta").once("value");
+        if (!meta.exists() || meta.val()?.active !== true) {
+          room = "";
+          student = null;
+          return { ok: false, message: "존재하지 않는 수업 코드입니다." };
+        }
         if (student) {
           const presence = roomRef(`presence/${clientId}`);
           await presence.set({ student, at: firebase.database.ServerValue.TIMESTAMP });
           presence.onDisconnect().remove();
         }
         attach();
-        return;
+        return { ok: true };
       }
       if (!room && typeof payload === "string") room = payload;
       switch (event) {

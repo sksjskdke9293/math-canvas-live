@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 5e6 });
 app.get("/health", (_, res) => res.json({ ok: true }));
-app.use((_, res) => res.redirect(302, "https://math-canvas-live-kr-2026.web.app"));
+app.use((_, res) => res.redirect(302, "https://livecanvas.web.app"));
 
 const rooms = new Map();
 const quizzes = new Map();
