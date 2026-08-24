@@ -19,6 +19,7 @@
     let room = "";
     let student = null;
     let presenceRef = null;
+    let previousKick = 0;
     let attached = false;
     const fire = (event, data) => (handlers.get(event) || []).forEach((fn) => fn(data));
     const on = (event, fn) => {
@@ -96,7 +97,9 @@
       if (student) {
         roomRef(`commands/clearStudent/${student.number}`).on("value", (snap) => snap.val() && fire("clear-student"));
         roomRef(`commands/kickStudent/${student.number}`).on("value", async (snap) => {
-          if (!snap.val()) return;
+          const kickedAt = Number(snap.val() || 0);
+          if (!kickedAt || kickedAt <= previousKick) return;
+          previousKick = kickedAt;
           if (presenceRef) await presenceRef.remove();
           fire("student-kicked");
         });
@@ -140,12 +143,8 @@
           return { ok: false, message: "존재하지 않는 수업 코드입니다." };
         }
         if (student) {
-          const kicked = await roomRef(`kicked/${student.number}`).once("value");
-          if (kicked.val() === true) {
-            room = "";
-            student = null;
-            return { ok: false, message: "이 수업에서 퇴장 처리되었습니다." };
-          }
+          const previousKickSnap = await roomRef(`commands/kickStudent/${student.number}`).once("value");
+          previousKick = Number(previousKickSnap.val() || 0);
         }
         if (student) {
           presenceRef = roomRef(`presence/${clientId}`);
@@ -174,7 +173,6 @@
           return fire("student-cleared", { number: payload.number });
         case "kick-student": {
           const targetRoomRef = db.ref(`rooms/${payload.room}`);
-          await targetRoomRef.child(`kicked/${payload.number}`).set(true);
           await targetRoomRef.child(`canvases/${payload.number}`).remove();
           const presenceSnap = await targetRoomRef.child("presence").once("value");
           const removals = [];
