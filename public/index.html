@@ -12,15 +12,15 @@
 </head>
 <body>
   <header class="topbar">
-    <button class="brand" data-route="home"><span>✦</span><b>LiveCanvas</b><em>LIVE</em></button>
+    <button class="brand" data-route="home"><span class="brand-mark"><i>L</i><i>C</i></span><b>LiveCanvas</b><em>LIVE</em></button>
     <div id="roomBadge" class="room-badge hidden"></div>
   </header>
   <main>
     <section id="home" class="view active home-view">
       <div class="home-copy">
-        <p class="eyebrow">생각이 보이는 실시간 교실</p>
-        <h1>말보다 빠르게,<br /><i>캔버스로 함께.</i></h1>
-        <p>설치 없이 수업 코드를 공유하세요. 학생의 풀이 과정이 교사 화면에 실시간으로 나타납니다.</p>
+        <p class="eyebrow">모두의 생각이 만나는 실시간 교실</p>
+        <h1>그리는 순간,<br /><i>배움이 연결돼요.</i></h1>
+        <p>선 하나도 놓치지 않는 라이브 수업. 설치 없이 코드를 공유하고 학생의 생각을 한눈에 만나보세요.</p>
       </div>
       <div class="role-grid">
         <button class="role-card student-role" data-route="studentJoin">
@@ -57,7 +57,7 @@
         <button data-tool="select" class="tool"><span>↖</span><small>선택</small></button>
         <button data-tool="pen" class="tool active"><span>✎</span><small>펜</small></button>
         <button data-tool="line" class="tool"><span>╱</span><small>직선</small></button>
-        <button data-tool="circle" class="tool"><span>○</span><small>원</small></button>
+        <button data-tool="shape" class="tool"><span>◇</span><small>도형</small></button>
         <button data-tool="number" class="tool"><span>↔</span><small>수직선</small></button>
         <button data-tool="text" class="tool"><span>T</span><small>텍스트</small></button>
         <button id="imageButton" class="tool"><span>▧</span><small>이미지</small></button><input id="imageInput" type="file" accept="image/*" hidden />
@@ -71,7 +71,7 @@
             <button id="moreColors" class="color more" title="더 많은 색상">+</button>
             <div id="colorPalette" class="color-palette hidden"></div>
           </div>
-          <label>굵기 <input id="width" type="range" min="2" max="14" value="4" /></label>
+          <div class="width-control"><button id="widthMinus" title="가늘게">−</button><span id="widthPreview">4px</span><button id="widthMore" title="굵기 자세히">+</button><div id="widthPanel" class="width-panel hidden"><b>펜 굵기</b><input id="width" type="range" min="1" max="60" value="4" /><input id="widthNumber" type="number" min="1" value="4" /><small>숫자로 원하는 굵기를 직접 입력할 수 있어요.</small></div></div>
           <select id="paper"><option value="grid">모눈종이</option><option value="blank">흰 종이</option><option value="line">줄 공책</option></select><span id="studentLabel"></span>
         </div>
         <div id="canvasBox" class="grid"><canvas id="canvas"></canvas><div id="objectLayer"></div></div>
