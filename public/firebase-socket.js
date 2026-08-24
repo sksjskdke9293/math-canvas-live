@@ -18,6 +18,7 @@
     const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     let room = "";
     let student = null;
+    let presenceRef = null;
     let attached = false;
     const fire = (event, data) => (handlers.get(event) || []).forEach((fn) => fn(data));
     const on = (event, fn) => {
@@ -87,9 +88,18 @@
       roomRef("canvases").on("child_added", (snap) => snap.val() && fire("drawing", snap.val()));
       roomRef("canvases").on("child_changed", (snap) => snap.val() && fire("drawing", snap.val()));
       roomRef("commands/clearRoom").on("value", (snap) => snap.val() && fire("clear-room"));
-      roomRef("commands/endClass").on("value", (snap) => snap.val() && fire("class-ended"));
+      roomRef("commands/endClass").on("value", async (snap) => {
+        if (!snap.val()) return;
+        if (presenceRef) await presenceRef.remove();
+        fire("class-ended");
+      });
       if (student) {
         roomRef(`commands/clearStudent/${student.number}`).on("value", (snap) => snap.val() && fire("clear-student"));
+        roomRef(`commands/kickStudent/${student.number}`).on("value", async (snap) => {
+          if (!snap.val()) return;
+          if (presenceRef) await presenceRef.remove();
+          fire("student-kicked");
+        });
         roomRef(`quizStats/${keyFor(student)}`).on("value", (snap) => snap.val() && fire("quiz-stats", snap.val()));
       }
       roomRef("quiz").on("value", async (snap) => {
@@ -110,6 +120,8 @@
         room = payload.room;
         student = null;
         await roomRef("commands/endClass").remove();
+        await roomRef("commands/kickStudent").remove();
+        await roomRef("kicked").remove();
         await roomRef("meta").update({
           expected: payload.expected,
           active: true,
@@ -128,9 +140,17 @@
           return { ok: false, message: "존재하지 않는 수업 코드입니다." };
         }
         if (student) {
-          const presence = roomRef(`presence/${clientId}`);
-          await presence.set({ student, at: firebase.database.ServerValue.TIMESTAMP });
-          presence.onDisconnect().remove();
+          const kicked = await roomRef(`kicked/${student.number}`).once("value");
+          if (kicked.val() === true) {
+            room = "";
+            student = null;
+            return { ok: false, message: "이 수업에서 퇴장 처리되었습니다." };
+          }
+        }
+        if (student) {
+          presenceRef = roomRef(`presence/${clientId}`);
+          await presenceRef.set({ student, at: firebase.database.ServerValue.TIMESTAMP });
+          presenceRef.onDisconnect().remove();
         }
         attach();
         return { ok: true };
@@ -152,6 +172,18 @@
           await db.ref(`rooms/${payload.room}/canvases/${payload.number}`).remove();
           await db.ref(`rooms/${payload.room}/commands/clearStudent/${payload.number}`).set(Date.now());
           return fire("student-cleared", { number: payload.number });
+        case "kick-student": {
+          const targetRoomRef = db.ref(`rooms/${payload.room}`);
+          await targetRoomRef.child(`kicked/${payload.number}`).set(true);
+          await targetRoomRef.child(`canvases/${payload.number}`).remove();
+          const presenceSnap = await targetRoomRef.child("presence").once("value");
+          const removals = [];
+          presenceSnap.forEach((entry) => {
+            if (String(entry.val()?.student?.number) === String(payload.number)) removals.push(entry.ref.remove());
+          });
+          await Promise.all(removals);
+          return targetRoomRef.child(`commands/kickStudent/${payload.number}`).set(firebase.database.ServerValue.TIMESTAMP);
+        }
         case "quiz-prepare":
           await roomRef("quizStats").remove();
           await roomRef("quizAnswers").remove();
