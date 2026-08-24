@@ -87,6 +87,7 @@
       roomRef("canvases").on("child_added", (snap) => snap.val() && fire("drawing", snap.val()));
       roomRef("canvases").on("child_changed", (snap) => snap.val() && fire("drawing", snap.val()));
       roomRef("commands/clearRoom").on("value", (snap) => snap.val() && fire("clear-room"));
+      roomRef("commands/endClass").on("value", (snap) => snap.val() && fire("class-ended"));
       if (student) {
         roomRef(`commands/clearStudent/${student.number}`).on("value", (snap) => snap.val() && fire("clear-student"));
         roomRef(`quizStats/${keyFor(student)}`).on("value", (snap) => snap.val() && fire("quiz-stats", snap.val()));
@@ -108,6 +109,7 @@
       if (event === "create-room") {
         room = payload.room;
         student = null;
+        await roomRef("commands/endClass").remove();
         await roomRef("meta").update({
           expected: payload.expected,
           active: true,
@@ -142,6 +144,10 @@
         case "clear-room":
           await roomRef("canvases").remove();
           return roomRef("commands/clearRoom").set(Date.now());
+        case "end-class":
+          await roomRef("meta").update({ active: false, endedAt: firebase.database.ServerValue.TIMESTAMP });
+          await roomRef("quiz").set({ status: "ended" });
+          return roomRef("commands/endClass").set(firebase.database.ServerValue.TIMESTAMP);
         case "clear-student":
           await db.ref(`rooms/${payload.room}/canvases/${payload.number}`).remove();
           await db.ref(`rooms/${payload.room}/commands/clearStudent/${payload.number}`).set(Date.now());
