@@ -157,13 +157,17 @@
           const result = await metaRef.transaction((n) => (n || 0) + 1);
           const questionNo = result.snapshot.val();
           await db.ref(`rooms/${targetRoom}/quizAnswers`).remove();
-          return db.ref(`rooms/${targetRoom}/quiz`).set({
+          const quiz = {
             status: "active",
             question: payload.question,
             answer: payload.answer,
             explanation: payload.explanation || "",
             questionNo,
-          });
+            publishedAt: firebase.database.ServerValue.TIMESTAMP,
+          };
+          await db.ref(`rooms/${targetRoom}/quiz`).set(quiz);
+          const saved = await db.ref(`rooms/${targetRoom}/quiz/status`).once("value");
+          return { ok: saved.val() === "active", questionNo };
         }
         case "quiz-result":
           await roomRef(`quizAnswers/${keyFor(student)}`).set({ answer: payload.answer, at: Date.now() });
